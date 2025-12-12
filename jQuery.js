@@ -10,10 +10,15 @@
     details: []
   };
   
-  // Unique markers for each test to detect which payloads actually execute
   let testCounter = 0;
   
-  // Multiple test payloads covering different XSS vectors
+  const browserBlocked = [
+    "Iframe src javascript",
+    "Object data",
+    "Meta refresh",
+    "Link href javascript"
+  ];
+  
   const testPayloads = [
     {
       name: 'IMG onerror',
@@ -21,7 +26,7 @@
         const id = `xss_img_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<img src=x onerror="window.${id}=true; alert('XSS - Delta: IMG onerror'); console.log('[!] XSS-IMG executed')">`,
+          html: `<img src=x onerror="window.${id}=true; console.log('[!] XSS-IMG executed')">`,
           id: id
         };
       }
@@ -32,7 +37,7 @@
         const id = `xss_script_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<script>window.${id}=true; alert('XSS - Delta: Script tag'); console.log('[!} XSS-SCRIPT executed');</script>`,
+          html: `<script>window.${id}=true; console.log('[!] XSS-SCRIPT executed');</script>`,
           id: id
         };
       }
@@ -43,7 +48,7 @@
         const id = `xss_svg_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<svg onload="window.${id}=true; alert('XSS - Delta: SVG onload'); console.log('[!} XSS-SVG executed')"></svg>`,
+          html: `<svg onload="window.${id}=true; console.log('[!] XSS-SVG executed')"></svg>`,
           id: id
         };
       }
@@ -54,7 +59,7 @@
         const id = `xss_iframe_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<iframe src="javascript:window.${id}=true; alert('XSS - Delta: Iframe javascript'); console.log('[!] XSS-IFRAME executed')"></iframe>`,
+          html: `<iframe src="javascript:window.${id}=true; console.log('[!] XSS-IFRAME executed')"></iframe>`,
           id: id
         };
       }
@@ -65,18 +70,7 @@
         const id = `xss_object_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<object data="javascript:window.${id}=true; alert('XSS - Delta: Object data'); console.log('[!] XSS-OBJECT executed')"></object>`,
-          id: id
-        };
-      }
-    },
-    {
-      name: 'Body onload',
-      payload: () => {
-        const id = `xss_body_${testCounter++}`;
-        window[id] = false;
-        return { 
-          html: `<body onload="window.${id}=true; alert('XSS - Delta: Body onload'); console.log('[!] XSS-BODY executed')"></body>`,
+          html: `<object data="javascript:window.${id}=true; console.log('[!] XSS-OBJECT executed')"></object>`,
           id: id
         };
       }
@@ -87,7 +81,7 @@
         const id = `xss_input_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<input onfocus="window.${id}=true; alert('XSS - Delta: Input onfocus'); console.log('[!] XSS-INPUT executed')" autofocus>`,
+          html: `<input onfocus="window.${id}=true; console.log('[!] XSS-INPUT executed')" autofocus>`,
           id: id
         };
       }
@@ -98,7 +92,7 @@
         const id = `xss_details_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<details open ontoggle="window.${id}=true; alert('XSS - Delta: Details ontoggle'); console.log('[!] XSS-DETAILS executed')"></details>`,
+          html: `<details open ontoggle="window.${id}=true; console.log('[!] XSS-DETAILS executed')"></details>`,
           id: id
         };
       }
@@ -109,7 +103,7 @@
         const id = `xss_ahref_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<a href="javascript:window.${id}=true; alert('XSS - Delta: A href javascript'); console.log('[!] XSS-AHREF executed')">click</a>`,
+          html: `<a href="javascript:window.${id}=true; console.log('[!] XSS-AHREF executed')">click</a>`,
           id: id
         };
       }
@@ -120,7 +114,7 @@
         const id = `xss_form_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<form action="javascript:window.${id}=true; alert('XSS - Delta: Form action'); console.log('[!] XSS-FORM executed')"><input type="submit"></form>`,
+          html: `<form action="javascript:window.${id}=true; console.log('[!] XSS-FORM executed')"><input type="submit"></form>`,
           id: id
         };
       }
@@ -131,7 +125,7 @@
         const id = `xss_video_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<video src=x onerror="window.${id}=true; alert('XSS - Delta: Video onerror'); console.log('[!] XSS-VIDEO executed')"></video>`,
+          html: `<video src=x onerror="window.${id}=true; console.log('[!] XSS-VIDEO executed')"></video>`,
           id: id
         };
       }
@@ -142,7 +136,7 @@
         const id = `xss_audio_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<audio src=x onerror="window.${id}=true; alert('XSS - Delta: Audio onerror'); console.log('[!] XSS-AUDIO executed')"></audio>`,
+          html: `<audio src=x onerror="window.${id}=true; console.log('[!] XSS-AUDIO executed')"></audio>`,
           id: id
         };
       }
@@ -153,7 +147,7 @@
         const id = `xss_style_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<style>*{xss:expression(window.${id}=true; alert('XSS - Delta: Style expression'))}</style>`,
+          html: `<style>*{xss:expression(window.${id}=true; console.log('[!] XSS-STYLE executed'))}</style>`,
           id: id
         };
       }
@@ -164,7 +158,7 @@
         const id = `xss_meta_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<meta http-equiv="refresh" content="0;javascript:window.${id}=true; alert('XSS - Delta: Meta refresh'); console.log('[!] XSS-META executed')">`,
+          html: `<meta http-equiv="refresh" content="0;javascript:window.${id}=true; console.log('[!] XSS-META executed')">`,
           id: id
         };
       }
@@ -175,14 +169,13 @@
         const id = `xss_link_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<link rel="stylesheet" href="javascript:window.${id}=true; alert('XSS - Delta: Link href'); console.log('[!] XSS-LINK executed')">`,
+          html: `<link rel="stylesheet" href="javascript:window.${id}=true; console.log('[!] XSS-LINK executed')">`,
           id: id
         };
       }
     }
   ];
   
-  // Test jQuery methods
   const jQueryMethods = [
     { name: '.html()', method: 'html' },
     { name: '.append()', method: 'append' },
@@ -190,18 +183,20 @@
     { name: '.after()', method: 'after' },
     { name: '.before()', method: 'before' },
     { name: '.replaceWith()', method: 'replaceWith' },
-    { name: '.wrap()', method: 'wrap' }
+    { name: '.wrap()  (note: wrapper insertion, not raw injection)', method: 'wrap' }
   ];
   
-  // Test execution function with promise support
   function runTest(jqMethod, test) {
     return new Promise((resolve) => {
       results.totalTests++;
       const payload = test.payload();
       const testId = payload.id;
       
+      if (browserBlocked.includes(test.name)) {
+        console.log(`  %c⚠ Browser-blocked vector: ${test.name}`, 'color: #FF9800;');
+      }
+      
       try {
-        // Create temporary container
         const container = $('<div></div>')
           .attr('id', `xss-test-${testId}`)
           .css({
@@ -216,7 +211,6 @@
           })
           .appendTo('body');
         
-        // Execute the jQuery method with payload
         if (jqMethod.method === 'replaceWith') {
           const dummy = $('<span></span>').appendTo(container);
           dummy[jqMethod.method](payload.html);
@@ -226,7 +220,6 @@
           container[jqMethod.method](payload.html);
         }
         
-        // Wait for potential async execution (longer delay for better detection)
         setTimeout(() => {
           const wasTriggered = window[testId] === true;
           
@@ -246,7 +239,6 @@
           
           results.details.push(result);
           
-          // Clean up
           container.remove();
           delete window[testId];
           
@@ -267,7 +259,6 @@
     });
   }
   
-  // Run all tests sequentially
   async function runAllTests() {
     for (const jqMethod of jQueryMethods) {
       console.log(`%cTesting: ${jqMethod.name}`, 'font-weight: bold; color: #2196F3; font-size: 14px;');
@@ -282,7 +273,6 @@
     displayResults();
   }
   
-  // Display comprehensive results
   function displayResults() {
     console.log('%c═══════════════════════════════════════', 'color: #9E9E9E;');
     console.log('%c Test Results Summary', 'font-size: 16px; font-weight: bold; color: #FF5722;');
@@ -298,7 +288,6 @@
     if (results.vulnerable.length > 0) {
       console.log('%c | VULNERABLE COMBINATIONS: |', 'color: #F44336; font-weight: bold; font-size: 14px;');
       
-      // Group by method
       const byMethod = {};
       results.details.filter(r => r.vulnerable).forEach(r => {
         if (!byMethod[r.method]) byMethod[r.method] = [];
@@ -325,7 +314,5 @@
     console.log('');
   }
   
-  // Start tests
   runAllTests();
-  
 })();
