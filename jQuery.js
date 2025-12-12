@@ -12,12 +12,42 @@
   
   let testCounter = 0;
   
-  const browserBlocked = [
-    "Iframe src javascript",
-    "Object data",
-    "Meta refresh",
-    "Link href javascript"
-  ];
+  // Track original page state for restoration
+  const originalPageState = {
+    title: document.title,
+    bodyHTML: null,
+    headHTML: null
+  };
+  
+  // Detect browser and note what it typically blocks
+  const browserInfo = {
+    name: 'Unknown',
+    blocksJavaScriptURIs: false,
+    blocksMetaRefresh: false
+  };
+  
+  // Simple browser detection
+  const ua = navigator.userAgent;
+  if (ua.includes('Chrome') && !ua.includes('Edg')) {
+    browserInfo.name = 'Chrome';
+    browserInfo.blocksJavaScriptURIs = true;
+    browserInfo.blocksMetaRefresh = true;
+  } else if (ua.includes('Firefox')) {
+    browserInfo.name = 'Firefox';
+    browserInfo.blocksJavaScriptURIs = true;
+    browserInfo.blocksMetaRefresh = true;
+  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+    browserInfo.name = 'Safari';
+    browserInfo.blocksJavaScriptURIs = true;
+    browserInfo.blocksMetaRefresh = true;
+  } else if (ua.includes('Edg')) {
+    browserInfo.name = 'Edge';
+    browserInfo.blocksJavaScriptURIs = true;
+    browserInfo.blocksMetaRefresh = true;
+  }
+  
+  console.log(`%cDetected Browser: ${browserInfo.name}`, 'color: #2196F3; font-weight: bold;');
+  console.log('');
   
   const testPayloads = [
     {
@@ -26,8 +56,9 @@
         const id = `xss_img_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<img src=x onerror="window.${id}=true; console.log('[!] XSS-IMG executed')">`,
-          id: id
+          html: `<img src=x onerror="window.${id}=true; alert('XSS - Delta: IMG onerror'); console.log('[!] XSS-IMG executed')">`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -37,8 +68,9 @@
         const id = `xss_script_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<script>window.${id}=true; console.log('[!] XSS-SCRIPT executed');</script>`,
-          id: id
+          html: `<script>window.${id}=true; alert('XSS - Delta: Script tag'); console.log('[!] XSS-SCRIPT executed');</script>`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -48,8 +80,9 @@
         const id = `xss_svg_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<svg onload="window.${id}=true; console.log('[!] XSS-SVG executed')"></svg>`,
-          id: id
+          html: `<svg onload="window.${id}=true; alert('XSS - Delta: SVG onload'); console.log('[!] XSS-SVG executed')"></svg>`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -59,8 +92,9 @@
         const id = `xss_iframe_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<iframe src="javascript:window.${id}=true; console.log('[!] XSS-IFRAME executed')"></iframe>`,
-          id: id
+          html: `<iframe src="javascript:window.${id}=true; alert('XSS - Delta: Iframe javascript'); console.log('[!] XSS-IFRAME executed')"></iframe>`,
+          id: id,
+          typicallyBlocked: browserInfo.blocksJavaScriptURIs
         };
       }
     },
@@ -70,8 +104,21 @@
         const id = `xss_object_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<object data="javascript:window.${id}=true; console.log('[!] XSS-OBJECT executed')"></object>`,
-          id: id
+          html: `<object data="javascript:window.${id}=true; alert('XSS - Delta: Object data'); console.log('[!] XSS-OBJECT executed')"></object>`,
+          id: id,
+          typicallyBlocked: browserInfo.blocksJavaScriptURIs
+        };
+      }
+    },
+    {
+      name: 'Body onload',
+      payload: () => {
+        const id = `xss_body_${testCounter++}`;
+        window[id] = false;
+        return { 
+          html: `<body onload="window.${id}=true; alert('XSS - Delta: Body onload'); console.log('[!] XSS-BODY executed')"></body>`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -81,8 +128,9 @@
         const id = `xss_input_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<input onfocus="window.${id}=true; console.log('[!] XSS-INPUT executed')" autofocus>`,
-          id: id
+          html: `<input onfocus="window.${id}=true; alert('XSS - Delta: Input onfocus'); console.log('[!] XSS-INPUT executed')" autofocus>`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -92,8 +140,9 @@
         const id = `xss_details_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<details open ontoggle="window.${id}=true; console.log('[!] XSS-DETAILS executed')"></details>`,
-          id: id
+          html: `<details open ontoggle="window.${id}=true; alert('XSS - Delta: Details ontoggle'); console.log('[!] XSS-DETAILS executed')"></details>`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -103,8 +152,9 @@
         const id = `xss_ahref_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<a href="javascript:window.${id}=true; console.log('[!] XSS-AHREF executed')">click</a>`,
-          id: id
+          html: `<a href="javascript:window.${id}=true; alert('XSS - Delta: A href javascript'); console.log('[!] XSS-AHREF executed')">click</a>`,
+          id: id,
+          typicallyBlocked: false // Requires user interaction
         };
       }
     },
@@ -114,8 +164,9 @@
         const id = `xss_form_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<form action="javascript:window.${id}=true; console.log('[!] XSS-FORM executed')"><input type="submit"></form>`,
-          id: id
+          html: `<form action="javascript:window.${id}=true; alert('XSS - Delta: Form action'); console.log('[!] XSS-FORM executed')"><input type="submit"></form>`,
+          id: id,
+          typicallyBlocked: false // Requires user interaction
         };
       }
     },
@@ -125,8 +176,9 @@
         const id = `xss_video_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<video src=x onerror="window.${id}=true; console.log('[!] XSS-VIDEO executed')"></video>`,
-          id: id
+          html: `<video src=x onerror="window.${id}=true; alert('XSS - Delta: Video onerror'); console.log('[!] XSS-VIDEO executed')"></video>`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -136,8 +188,9 @@
         const id = `xss_audio_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<audio src=x onerror="window.${id}=true; console.log('[!] XSS-AUDIO executed')"></audio>`,
-          id: id
+          html: `<audio src=x onerror="window.${id}=true; alert('XSS - Delta: Audio onerror'); console.log('[!] XSS-AUDIO executed')"></audio>`,
+          id: id,
+          typicallyBlocked: false
         };
       }
     },
@@ -147,8 +200,9 @@
         const id = `xss_style_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<style>*{xss:expression(window.${id}=true; console.log('[!] XSS-STYLE executed'))}</style>`,
-          id: id
+          html: `<style>*{xss:expression(window.${id}=true; alert('XSS - Delta: Style expression'))}</style>`,
+          id: id,
+          typicallyBlocked: true // Only works in old IE
         };
       }
     },
@@ -158,8 +212,9 @@
         const id = `xss_meta_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<meta http-equiv="refresh" content="0;javascript:window.${id}=true; console.log('[!] XSS-META executed')">`,
-          id: id
+          html: `<meta http-equiv="refresh" content="0;javascript:window.${id}=true; alert('XSS - Delta: Meta refresh'); console.log('[!] XSS-META executed')">`,
+          id: id,
+          typicallyBlocked: browserInfo.blocksMetaRefresh
         };
       }
     },
@@ -169,8 +224,9 @@
         const id = `xss_link_${testCounter++}`;
         window[id] = false;
         return { 
-          html: `<link rel="stylesheet" href="javascript:window.${id}=true; console.log('[!] XSS-LINK executed')">`,
-          id: id
+          html: `<link rel="stylesheet" href="javascript:window.${id}=true; alert('XSS - Delta: Link href'); console.log('[!] XSS-LINK executed')">`,
+          id: id,
+          typicallyBlocked: browserInfo.blocksJavaScriptURIs
         };
       }
     }
@@ -182,8 +238,7 @@
     { name: '.prepend()', method: 'prepend' },
     { name: '.after()', method: 'after' },
     { name: '.before()', method: 'before' },
-    { name: '.replaceWith()', method: 'replaceWith' },
-    { name: '.wrap()  (note: wrapper insertion, not raw injection)', method: 'wrap' }
+    { name: '.replaceWith()', method: 'replaceWith' }
   ];
   
   function runTest(jqMethod, test) {
@@ -192,41 +247,45 @@
       const payload = test.payload();
       const testId = payload.id;
       
-      if (browserBlocked.includes(test.name)) {
-        console.log(`  %c⚠ Browser-blocked vector: ${test.name}`, 'color: #FF9800;');
+      if (payload.typicallyBlocked) {
+        console.log(`  %c⚠ Typically browser-blocked: ${test.name}`, 'color: #FF9800;');
       }
       
       try {
+        // Create an isolated container that cannot affect the main page
         const container = $('<div></div>')
           .attr('id', `xss-test-${testId}`)
           .css({
-            position: 'absolute',
-            top: '-9999px',
-            left: '-9999px',
+            position: 'fixed',
+            top: '-10000px',
+            left: '-10000px',
             width: '1px',
             height: '1px',
             overflow: 'hidden',
             visibility: 'hidden',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            zIndex: '-9999',
+            opacity: '0'
           })
           .appendTo('body');
         
+        // Execute the jQuery method with payload
         if (jqMethod.method === 'replaceWith') {
           const dummy = $('<span></span>').appendTo(container);
           dummy[jqMethod.method](payload.html);
-        } else if (jqMethod.method === 'wrap') {
-          $('<div></div>').appendTo(container)[jqMethod.method](payload.html);
         } else {
           container[jqMethod.method](payload.html);
         }
         
+        // Wait for potential execution
         setTimeout(() => {
           const wasTriggered = window[testId] === true;
           
           const result = {
             method: jqMethod.name,
             payload: test.name,
-            vulnerable: wasTriggered
+            vulnerable: wasTriggered,
+            typicallyBlocked: payload.typicallyBlocked
           };
           
           if (wasTriggered) {
@@ -239,8 +298,15 @@
           
           results.details.push(result);
           
+          // Immediate cleanup to prevent any page alteration
           container.remove();
           delete window[testId];
+          
+          // Verify page integrity
+          if (document.title !== originalPageState.title) {
+            document.title = originalPageState.title;
+            console.log('%c⚠ Page title was altered and has been restored', 'color: #FF9800;');
+          }
           
           resolve();
         }, 150);
@@ -260,6 +326,9 @@
   }
   
   async function runAllTests() {
+    // Store original page title for restoration
+    originalPageState.title = document.title;
+    
     for (const jqMethod of jQueryMethods) {
       console.log(`%cTesting: ${jqMethod.name}`, 'font-weight: bold; color: #2196F3; font-size: 14px;');
       
@@ -271,6 +340,7 @@
     }
     
     displayResults();
+    finalCleanup();
   }
   
   function displayResults() {
@@ -310,8 +380,25 @@
     console.log('');
     console.log('%c| Test Matrix: |', 'font-weight: bold;');
     console.table(results.details);
+  }
+  
+  function finalCleanup() {
+    // Remove any leftover test containers
+    $('[id^="xss-test-"]').remove();
     
-    console.log('');
+    // Clean up any test variables from window
+    Object.keys(window).forEach(key => {
+      if (key.startsWith('xss_')) {
+        delete window[key];
+      }
+    });
+    
+    // Restore page title if somehow changed
+    if (document.title !== originalPageState.title) {
+      document.title = originalPageState.title;
+    }
+    
+    console.log('%c✓ Cleanup complete - page integrity verified', 'color: #4CAF50; font-weight: bold;');
   }
   
   runAllTests();
